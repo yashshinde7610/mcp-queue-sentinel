@@ -1,0 +1,49 @@
+{
+  "name": "mcp-queue-sentinel",
+  "version": "1.0.0",
+  "description": "A microservices-based MCP server for BullMQ queue management with rate limiting, real-time monitoring, and failure analysis",
+  "main": "dist/index.js",
+  "type": "module",
+  "bin": {
+    "mcp-queue-sentinel": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/index.ts",
+    "start": "node dist/index.js",
+    "test": "jest --config jest.config.cjs",
+    "test:watch": "jest --config jest.config.cjs --watch",
+    "test:coverage": "jest --config jest.config.cjs --coverage",
+    "monitor": "tsx src/monitoring/sse-server.ts",
+    "lint": "tsc --noEmit"
+  },
+  "keywords": [
+    "mcp",
+    "bullmq",
+    "redis",
+    "queue-management",
+    "rate-limiting",
+    "monitoring",
+    "failure-analysis",
+    "microservices",
+    "model-context-protocol"
+  ],
+  "author": "Yash Deepak Shinde",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yashshinde7610/mcp-queue-sentinel.git"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.17.0",
+    "bullmq": "^5.56.9",
+    "ioredis": "^5.6.1"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.14",
+    "@types/node": "^24.1.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.3.4",
+    "tsx": "^4.20.3",
+    "typescript": "^5.8.3"
+  }
+}

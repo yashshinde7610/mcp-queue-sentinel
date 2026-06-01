@@ -1,0 +1,10 @@
+node_modules/
+dist/
+*.js
+*.d.ts
+*.js.map
+!jest.config.cjs
+.env
+.env.local
+coverage/
+.DS_Store
