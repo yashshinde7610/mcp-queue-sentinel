@@ -181,6 +181,3 @@ docker-compose up -d  # Start Redis + MCP server + monitoring
 - **Jest** — Unit testing
 - **SSE** — Server-Sent Events for real-time monitoring
 
-## License
-
-MIT
