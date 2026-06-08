@@ -1,0 +1,8 @@
+node_modules
+dist
+.git
+.gitignore
+README.md
+jest.config.cjs
+docker-compose.yml
+src/__tests__
