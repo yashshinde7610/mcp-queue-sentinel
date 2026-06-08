@@ -1,6 +1,9 @@
 import * as http from "node:http";
 import { MetricsCollector } from "./metrics-collector.js";
 import { MONITORING_CONFIG } from "../config/redis.config.js";
+import { logger } from "../utils/logger.js";
+
+const MONITOR_TOKEN = process.env.MONITOR_TOKEN || null;
 
 /**
  * Lightweight HTTP server that exposes:
@@ -26,10 +29,9 @@ export class SSEServer {
   start(): Promise<void> {
     return new Promise((resolve, reject) => {
       this.server = http.createServer((req, res) => {
-        // CORS headers for local development
         res.setHeader("Access-Control-Allow-Origin", "*");
         res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
-        res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+        res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
 
         if (req.method === "OPTIONS") {
           res.writeHead(204);
@@ -39,15 +41,25 @@ export class SSEServer {
 
         const url = new URL(req.url || "/", `http://localhost:${this.port}`);
 
+        // Health is unauthenticated (for load balancer probes)
+        if (url.pathname === "/health") {
+          this.handleHealth(res);
+          return;
+        }
+
+        // All other endpoints require token if MONITOR_TOKEN is set
+        if (MONITOR_TOKEN && !this.validateToken(req, url)) {
+          res.writeHead(401, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: "Unauthorized. Set ?token= query param or Authorization header." }));
+          return;
+        }
+
         switch (url.pathname) {
           case "/events":
             this.handleSSE(req, res);
             break;
           case "/metrics":
             this.handleMetrics(res);
-            break;
-          case "/health":
-            this.handleHealth(res);
             break;
           case "/":
             this.handleDashboard(res);
@@ -59,12 +71,14 @@ export class SSEServer {
       });
 
       this.server.listen(this.port, () => {
+        logger.info("sse-server", `monitoring server started on port ${this.port}`, {
+          authEnabled: !!MONITOR_TOKEN,
+        });
         resolve();
       });
 
       this.server.on("error", reject);
 
-      // Broadcast metrics to all SSE clients every 5 seconds
       this.intervalId = setInterval(() => {
         this.broadcast();
       }, MONITORING_CONFIG.sseIntervalMs);
@@ -152,6 +166,22 @@ export class SSEServer {
     for (const client of this.clients) {
       client.write(data);
     }
+  }
+
+  /**
+   * Validate the request token against MONITOR_TOKEN.
+   * Accepts either ?token= query param or Authorization: Bearer header.
+   */
+  private validateToken(req: http.IncomingMessage, url: URL): boolean {
+    const queryToken = url.searchParams.get("token");
+    if (queryToken === MONITOR_TOKEN) return true;
+
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      return authHeader.slice(7) === MONITOR_TOKEN;
+    }
+
+    return false;
   }
 
   /**
