@@ -42,9 +42,10 @@ export class ToolHandler {
     args: Record<string, any>
   ): Promise<{ content: Array<{ type: string; text: string }>; isError?: boolean }> {
     try {
-      // --- Rate Limiting (middleware) ---
+      // Rate limiting — scoped per-connection so each client gets independent limits
       const category = TOOL_CATEGORIES[name] || ("read" as ToolCategory);
-      const limitResult = this.rateLimiter.consume(category);
+      const connId = this.getActiveConnectionId();
+      const limitResult = await this.rateLimiter.consume(category, connId);
 
       if (!limitResult.allowed) {
         this.metrics.recordRateLimitHit();
@@ -227,6 +228,19 @@ export class ToolHandler {
 
       default:
         throw new Error(`Unknown tool: ${name}`);
+    }
+  }
+
+  /**
+   * Extract the active connection ID for per-connection rate limiting.
+   * Returns undefined before a connection is established (uses global bucket).
+   */
+  private getActiveConnectionId(): string | undefined {
+    try {
+      const conns = this.connectionService.listConnections();
+      return conns.find((c) => c.active)?.id;
+    } catch {
+      return undefined;
     }
   }
 }
