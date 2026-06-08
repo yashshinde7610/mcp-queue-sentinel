@@ -121,14 +121,14 @@ export class TokenBucketRateLimiter {
     return this.peekInMemory(bucketKey, config);
   }
 
-  /**
-   * Reset all rate limit buckets.
-   */
+  /** Reset all rate limit buckets. */
   async reset(): Promise<void> {
     this.inMemoryBuckets.clear();
     if (this.redis) {
-      const keys = await this.redis.keys(`${this.keyPrefix}:*`);
-      if (keys.length > 0) await this.redis.del(...keys);
+      const stream = this.redis.scanStream({ match: `${this.keyPrefix}:*`, count: 200 });
+      for await (const keys of stream) {
+        if ((keys as string[]).length > 0) await this.redis.del(...(keys as string[]));
+      }
     }
   }
 
