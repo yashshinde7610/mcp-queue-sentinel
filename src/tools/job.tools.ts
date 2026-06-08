@@ -1,8 +1,5 @@
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
 
-/**
- * MCP tool definitions for individual job operations.
- */
 export const jobTools: Tool[] = [
   {
     name: "get_jobs",
@@ -18,6 +15,7 @@ export const jobTools: Tool[] = [
         },
         start: { type: "number", description: "Start index", default: 0 },
         end: { type: "number", description: "End index", default: 10 },
+        connectionId: { type: "string", description: "Target connection ID (uses last connected if omitted)" },
       },
       required: ["queue", "status"],
     },
@@ -30,6 +28,7 @@ export const jobTools: Tool[] = [
       properties: {
         queue: { type: "string", description: "Queue name" },
         jobId: { type: "string", description: "Job ID" },
+        connectionId: { type: "string", description: "Target connection ID (uses last connected if omitted)" },
       },
       required: ["queue", "jobId"],
     },
@@ -55,6 +54,7 @@ export const jobTools: Tool[] = [
             removeOnFail: { type: "boolean", description: "Remove on fail" },
           },
         },
+        connectionId: { type: "string", description: "Target connection ID (uses last connected if omitted)" },
       },
       required: ["queue", "name", "data"],
     },
@@ -67,6 +67,7 @@ export const jobTools: Tool[] = [
       properties: {
         queue: { type: "string", description: "Queue name" },
         jobId: { type: "string", description: "Job ID" },
+        connectionId: { type: "string", description: "Target connection ID (uses last connected if omitted)" },
       },
       required: ["queue", "jobId"],
     },
@@ -79,6 +80,7 @@ export const jobTools: Tool[] = [
       properties: {
         queue: { type: "string", description: "Queue name" },
         jobId: { type: "string", description: "Job ID" },
+        connectionId: { type: "string", description: "Target connection ID (uses last connected if omitted)" },
       },
       required: ["queue", "jobId"],
     },
@@ -91,6 +93,7 @@ export const jobTools: Tool[] = [
       properties: {
         queue: { type: "string", description: "Queue name" },
         jobId: { type: "string", description: "Job ID" },
+        connectionId: { type: "string", description: "Target connection ID (uses last connected if omitted)" },
       },
       required: ["queue", "jobId"],
     },
@@ -103,6 +106,7 @@ export const jobTools: Tool[] = [
       properties: {
         queue: { type: "string", description: "Queue name" },
         jobId: { type: "string", description: "Job ID" },
+        connectionId: { type: "string", description: "Target connection ID (uses last connected if omitted)" },
       },
       required: ["queue", "jobId"],
     },
@@ -116,6 +120,7 @@ export const jobTools: Tool[] = [
         queue: { type: "string", description: "Queue name" },
         jobId: { type: "string", description: "Job ID" },
         message: { type: "string", description: "Log message" },
+        connectionId: { type: "string", description: "Target connection ID (uses last connected if omitted)" },
       },
       required: ["queue", "jobId", "message"],
     },
@@ -132,6 +137,7 @@ export const jobTools: Tool[] = [
         dlqKey: { type: "string", description: "DLQ Redis key", default: "dlq:failed_jobs" },
         ttlDays: { type: "number", description: "TTL in days for DLQ entries", default: 30 },
         dryRun: { type: "boolean", description: "Preview without moving", default: false },
+        connectionId: { type: "string", description: "Target connection ID (uses last connected if omitted)" },
       },
       required: ["queue", "jobName", "beforeTimestamp"],
     },
@@ -145,6 +151,7 @@ export const jobTools: Tool[] = [
         dlqKey: { type: "string", description: "DLQ Redis key", default: "dlq:failed_jobs" },
         jobName: { type: "string", description: "Filter by job name" },
         limit: { type: "number", description: "Max results", default: 10 },
+        connectionId: { type: "string", description: "Target connection ID (uses last connected if omitted)" },
       },
     },
   },

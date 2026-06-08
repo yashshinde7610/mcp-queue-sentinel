@@ -1,8 +1,5 @@
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
 
-/**
- * MCP tool definitions for queue-level operations.
- */
 export const queueTools: Tool[] = [
   {
     name: "list_queues",
@@ -15,6 +12,7 @@ export const queueTools: Tool[] = [
           description: "Queue name pattern (supports wildcards)",
           default: "*",
         },
+        connectionId: { type: "string", description: "Target connection ID (uses last connected if omitted)" },
       },
     },
   },
@@ -25,6 +23,7 @@ export const queueTools: Tool[] = [
       type: "object",
       properties: {
         queue: { type: "string", description: "Queue name" },
+        connectionId: { type: "string", description: "Target connection ID (uses last connected if omitted)" },
       },
       required: ["queue"],
     },
@@ -36,6 +35,7 @@ export const queueTools: Tool[] = [
       type: "object",
       properties: {
         queue: { type: "string", description: "Queue name" },
+        connectionId: { type: "string", description: "Target connection ID (uses last connected if omitted)" },
       },
       required: ["queue"],
     },
@@ -47,6 +47,7 @@ export const queueTools: Tool[] = [
       type: "object",
       properties: {
         queue: { type: "string", description: "Queue name" },
+        connectionId: { type: "string", description: "Target connection ID (uses last connected if omitted)" },
       },
       required: ["queue"],
     },
@@ -58,6 +59,7 @@ export const queueTools: Tool[] = [
       type: "object",
       properties: {
         queue: { type: "string", description: "Queue name" },
+        connectionId: { type: "string", description: "Target connection ID (uses last connected if omitted)" },
       },
       required: ["queue"],
     },
@@ -77,6 +79,7 @@ export const queueTools: Tool[] = [
           description: "Job status to clean",
           default: "completed",
         },
+        connectionId: { type: "string", description: "Target connection ID (uses last connected if omitted)" },
       },
       required: ["queue"],
     },

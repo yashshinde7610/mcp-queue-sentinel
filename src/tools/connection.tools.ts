@@ -1,8 +1,5 @@
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
 
-/**
- * MCP tool definitions for Redis connection management.
- */
 export const connectionTools: Tool[] = [
   {
     name: "connect",
@@ -26,23 +23,17 @@ export const connectionTools: Tool[] = [
   },
   {
     name: "disconnect",
-    description: "Disconnect from the current Redis instance",
-    inputSchema: { type: "object", properties: {} },
+    description: "Disconnect from a Redis instance",
+    inputSchema: {
+      type: "object",
+      properties: {
+        connectionId: { type: "string", description: "Target connection ID (uses last connected if omitted)" },
+      },
+    },
   },
   {
     name: "list_connections",
     description: "List all saved connections",
     inputSchema: { type: "object", properties: {} },
-  },
-  {
-    name: "switch_connection",
-    description: "Switch to a different saved connection",
-    inputSchema: {
-      type: "object",
-      properties: {
-        id: { type: "string", description: "Connection identifier to switch to" },
-      },
-      required: ["id"],
-    },
   },
 ];
