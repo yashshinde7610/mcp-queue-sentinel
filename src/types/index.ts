@@ -126,7 +126,6 @@ export const TOOL_CATEGORIES: Record<string, ToolCategory> = {
   // Write operations
   connect: "write",
   disconnect: "write",
-  switch_connection: "write",
   add_job: "write",
   remove_job: "write",
   retry_job: "write",
