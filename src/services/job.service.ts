@@ -1,23 +1,17 @@
 import { Job } from "bullmq";
 import { ConnectionService } from "./connection.service.js";
 
-/**
- * Handles individual job operations: CRUD, retry, promote,
- * logging, and dead-letter queue management.
- */
 export class JobService {
   constructor(private connectionService: ConnectionService) {}
 
-  /**
-   * Get jobs from a queue filtered by status.
-   */
   async getJobs(
     queueName: string,
     status: string,
     start: number = 0,
-    end: number = 10
+    end: number = 10,
+    connectionId?: string
   ): Promise<any[]> {
-    const queue = this.connectionService.getQueue(queueName);
+    const queue = this.connectionService.getQueue(queueName, connectionId);
 
     if (status === "repeat") {
       return await queue.getRepeatableJobs(start, end);
@@ -58,11 +52,8 @@ export class JobService {
     }));
   }
 
-  /**
-   * Get a single job by ID with full details.
-   */
-  async getJob(queueName: string, jobId: string): Promise<any> {
-    const queue = this.connectionService.getQueue(queueName);
+  async getJob(queueName: string, jobId: string, connectionId?: string): Promise<any> {
+    const queue = this.connectionService.getQueue(queueName, connectionId);
     const job = await queue.getJob(jobId);
 
     if (!job) {
@@ -85,89 +76,70 @@ export class JobService {
     };
   }
 
-  /**
-   * Add a new job to a queue.
-   */
   async addJob(
     queueName: string,
     jobName: string,
     data: Record<string, unknown>,
-    opts: Record<string, unknown> = {}
+    opts: Record<string, unknown> = {},
+    connectionId?: string
   ): Promise<{ id: string | undefined; name: string }> {
-    const queue = this.connectionService.getQueue(queueName);
+    const queue = this.connectionService.getQueue(queueName, connectionId);
     const job = await queue.add(jobName, data, opts);
     return { id: job.id, name: job.name };
   }
 
-  /**
-   * Remove a job from a queue.
-   */
-  async removeJob(queueName: string, jobId: string): Promise<void> {
-    const queue = this.connectionService.getQueue(queueName);
+  async removeJob(queueName: string, jobId: string, connectionId?: string): Promise<void> {
+    const queue = this.connectionService.getQueue(queueName, connectionId);
     const job = await queue.getJob(jobId);
     if (!job) throw new Error(`Job ${jobId} not found in queue ${queueName}`);
     await job.remove();
   }
 
-  /**
-   * Retry a failed job.
-   */
-  async retryJob(queueName: string, jobId: string): Promise<void> {
-    const queue = this.connectionService.getQueue(queueName);
+  async retryJob(queueName: string, jobId: string, connectionId?: string): Promise<void> {
+    const queue = this.connectionService.getQueue(queueName, connectionId);
     const job = await queue.getJob(jobId);
     if (!job) throw new Error(`Job ${jobId} not found in queue ${queueName}`);
     await job.retry();
   }
 
-  /**
-   * Promote a delayed job to be immediately processed.
-   */
-  async promoteJob(queueName: string, jobId: string): Promise<void> {
-    const queue = this.connectionService.getQueue(queueName);
+  async promoteJob(queueName: string, jobId: string, connectionId?: string): Promise<void> {
+    const queue = this.connectionService.getQueue(queueName, connectionId);
     const job = await queue.getJob(jobId);
     if (!job) throw new Error(`Job ${jobId} not found in queue ${queueName}`);
     await job.promote();
   }
 
-  /**
-   * Get logs for a specific job.
-   */
-  async getJobLogs(queueName: string, jobId: string): Promise<string[]> {
-    const queue = this.connectionService.getQueue(queueName);
+  async getJobLogs(queueName: string, jobId: string, connectionId?: string): Promise<string[]> {
+    const queue = this.connectionService.getQueue(queueName, connectionId);
     const job = await queue.getJob(jobId);
     if (!job) throw new Error(`Job ${jobId} not found in queue ${queueName}`);
     const logs = await queue.getJobLogs(jobId);
     return logs.logs;
   }
 
-  /**
-   * Add a log entry to a specific job.
-   */
   async addJobLog(
     queueName: string,
     jobId: string,
-    message: string
+    message: string,
+    connectionId?: string
   ): Promise<void> {
-    const queue = this.connectionService.getQueue(queueName);
+    const queue = this.connectionService.getQueue(queueName, connectionId);
     const job = await queue.getJob(jobId);
     if (!job) throw new Error(`Job ${jobId} not found in queue ${queueName}`);
     await job.log(message);
   }
 
-  /**
-   * Move failed jobs to a dead-letter queue (DLQ) stored as plain Redis keys
-   * with a configurable TTL. Supports dry-run mode for previewing.
-   */
   async moveFailedToDLQ(
     queueName: string,
     jobName: string,
     beforeTimestamp: number,
     dlqKey: string = "dlq:failed_jobs",
     ttlDays: number = 30,
-    dryRun: boolean = false
+    dryRun: boolean = false,
+    connectionId?: string
   ): Promise<{ totalMoved: number; movedJobs: any[] }> {
-    const queue = this.connectionService.getQueue(queueName);
-    const redis = this.connectionService.getRedis();
+    const queue = this.connectionService.getQueue(queueName, connectionId);
+    const redis = this.connectionService.getRedis(connectionId);
 
     const batchSize = 100;
     let start = 0;
@@ -216,7 +188,6 @@ export class JobService {
       start += batchSize;
     }
 
-    // Create an index for efficient querying
     if (!dryRun && totalMoved > 0) {
       const indexKey = `${dlqKey}:index:${jobName}`;
       await redis.setex(
@@ -235,29 +206,31 @@ export class JobService {
     return { totalMoved, movedJobs };
   }
 
-  /**
-   * Query jobs in the dead-letter queue.
-   */
   async queryDLQ(
-    dlqKey: string = "dlq:failed_jobs",
+    dlqKey = "dlq:failed_jobs",
     jobName?: string,
-    limit: number = 10
+    limit = 10,
+    connectionId?: string
   ): Promise<any[]> {
-    const redis = this.connectionService.getRedis();
-    const keys = await redis.keys(`${dlqKey}:*`);
-    const jobKeys = keys.filter((key) => !key.includes(":index:"));
-
+    const redis = this.connectionService.getRedis(connectionId);
     const jobs: any[] = [];
-    for (let i = 0; i < Math.min(jobKeys.length, limit); i++) {
-      const jobData = await redis.get(jobKeys[i]);
-      if (jobData) {
-        const parsed = JSON.parse(jobData);
-        if (!jobName || parsed.jobName === jobName) {
-          jobs.push(parsed);
+
+    const stream = redis.scanStream({ match: `${dlqKey}:*`, count: 200 });
+    for await (const keys of stream) {
+      for (const key of keys as string[]) {
+        if (key.includes(":index:")) continue;
+        if (jobs.length >= limit) break;
+
+        const jobData = await redis.get(key);
+        if (jobData) {
+          const parsed = JSON.parse(jobData);
+          if (!jobName || parsed.jobName === jobName) {
+            jobs.push(parsed);
+          }
         }
       }
+      if (jobs.length >= limit) break;
     }
-
     return jobs;
   }
 }

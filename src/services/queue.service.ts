@@ -1,71 +1,51 @@
 import { Job } from "bullmq";
 import { ConnectionService } from "./connection.service.js";
 
-/**
- * Handles all queue-level operations: listing, pausing, resuming,
- * draining, cleaning, and fetching statistics.
- */
 export class QueueService {
   constructor(private connectionService: ConnectionService) {}
 
-  /**
-   * List all BullMQ queues discovered via Redis key scanning.
-   */
-  async listQueues(pattern: string = "*"): Promise<string[]> {
-    const redis = this.connectionService.getRedis();
-    const keys = await redis.keys(`bull:${pattern}:*`);
-
+  async listQueues(pattern: string = "*", connectionId?: string): Promise<string[]> {
+    const redis = this.connectionService.getRedis(connectionId);
     const queueNames = new Set<string>();
-    for (const key of keys) {
-      const match = key.match(/^bull:([^:]+):/);
-      if (match) queueNames.add(match[1]);
-    }
 
+    const stream = redis.scanStream({ match: `bull:${pattern}:*`, count: 200 });
+    for await (const keys of stream) {
+      for (const key of keys as string[]) {
+        const match = key.match(/^bull:([^:]+):/);
+        if (match) queueNames.add(match[1]);
+      }
+    }
     return Array.from(queueNames).sort();
   }
 
-  /**
-   * Get job count statistics for a specific queue.
-   */
-  async getStats(queueName: string): Promise<Record<string, number>> {
-    const queue = this.connectionService.getQueue(queueName);
+  async getStats(queueName: string, connectionId?: string): Promise<Record<string, number>> {
+    const queue = this.connectionService.getQueue(queueName, connectionId);
     return await queue.getJobCounts();
   }
 
-  /**
-   * Pause processing for a specific queue.
-   */
-  async pauseQueue(queueName: string): Promise<void> {
-    const queue = this.connectionService.getQueue(queueName);
+  async pauseQueue(queueName: string, connectionId?: string): Promise<void> {
+    const queue = this.connectionService.getQueue(queueName, connectionId);
     await queue.pause();
   }
 
-  /**
-   * Resume processing for a paused queue.
-   */
-  async resumeQueue(queueName: string): Promise<void> {
-    const queue = this.connectionService.getQueue(queueName);
+  async resumeQueue(queueName: string, connectionId?: string): Promise<void> {
+    const queue = this.connectionService.getQueue(queueName, connectionId);
     await queue.resume();
   }
 
-  /**
-   * Remove all jobs from a queue (drain).
-   */
-  async drainQueue(queueName: string): Promise<void> {
-    const queue = this.connectionService.getQueue(queueName);
+  async drainQueue(queueName: string, connectionId?: string): Promise<void> {
+    const queue = this.connectionService.getQueue(queueName, connectionId);
     await queue.drain();
   }
 
-  /**
-   * Clean jobs by status with a configurable grace period and limit.
-   */
   async cleanQueue(
     queueName: string,
     grace: number = 0,
     limit: number = 1000,
-    status: "completed" | "failed" = "completed"
+    status: "completed" | "failed" = "completed",
+    connectionId?: string
   ): Promise<number> {
-    const queue = this.connectionService.getQueue(queueName);
+    const queue = this.connectionService.getQueue(queueName, connectionId);
     const cleaned = await queue.clean(grace, limit, status);
     return cleaned.length;
   }

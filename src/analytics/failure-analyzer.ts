@@ -1,45 +1,29 @@
 import type { FailureAnalysisResult, FailureGroup } from "../types/index.js";
 import { ConnectionService } from "../services/connection.service.js";
 
-/**
- * Failure Analysis Engine
- *
- * Analyzes failed jobs across queues by:
- *  1. Grouping similar errors via normalized string matching
- *  2. Computing failure rates and trends over time
- *  3. Suggesting probable root causes based on error patterns
- *
- * This is a practical application of data aggregation and
- * pattern recognition — useful for ops dashboards and SRE workflows.
- */
+/** Analyzes failed jobs across queues — groups errors, computes rates, and suggests causes. */
 export class FailureAnalyzer {
   constructor(private connectionService: ConnectionService) {}
 
-  /**
-   * Analyze failures for a specific queue within a time window.
-   */
   async analyzeFailures(
     queueName: string,
-    windowMs: number = 24 * 60 * 60 * 1000, // default: last 24h
-    limit: number = 500
+    windowMs: number = 24 * 60 * 60 * 1000,
+    limit: number = 500,
+    connectionId?: string
   ): Promise<FailureAnalysisResult> {
-    const queue = this.connectionService.getQueue(queueName);
+    const queue = this.connectionService.getQueue(queueName, connectionId);
 
-    // Fetch failed and total job counts
     const counts = await queue.getJobCounts();
     const totalFailed = counts.failed || 0;
     const totalJobs = Object.values(counts).reduce((a, b) => a + b, 0);
 
-    // Fetch failed jobs (up to limit)
     const failedJobs = await queue.getFailed(0, limit);
     const cutoff = Date.now() - windowMs;
 
-    // Filter to the time window
     const recentFailures = failedJobs.filter(
       (job) => job.timestamp >= cutoff
     );
 
-    // Group failures by normalized error message
     const errorGroups = new Map<
       string,
       {
@@ -51,7 +35,12 @@ export class FailureAnalyzer {
       }
     >();
 
-    for (const job of recentFailures) {
+    for (let i = 0; i < recentFailures.length; i++) {
+      if (i % 50 === 0 && i > 0) {
+        await new Promise(resolve => setImmediate(resolve));
+      }
+
+      const job = recentFailures[i];
       const rawError = job.failedReason || "Unknown error";
       const pattern = this.normalizeError(rawError);
 
@@ -72,7 +61,6 @@ export class FailureAnalyzer {
       group.lastSeen = Math.max(group.lastSeen, job.timestamp);
     }
 
-    // Convert to sorted FailureGroup array
     const groups: FailureGroup[] = Array.from(errorGroups.entries())
       .map(([pattern, data]) => ({
         pattern,
@@ -88,7 +76,6 @@ export class FailureAnalyzer {
       }))
       .sort((a, b) => b.count - a.count);
 
-    // Build hourly trend
     const trendByHour: Record<string, number> = {};
     for (const job of recentFailures) {
       const hourKey = new Date(job.timestamp).toISOString().slice(0, 13) + ":00";
@@ -109,10 +96,7 @@ export class FailureAnalyzer {
     };
   }
 
-  /**
-   * Get a summary of failure stats across all queues.
-   */
-  async getFailureSummary(): Promise<
+  async getFailureSummary(connectionId?: string): Promise<
     Array<{
       queueName: string;
       totalFailed: number;
@@ -121,18 +105,20 @@ export class FailureAnalyzer {
       topError: string | null;
     }>
   > {
-    const redis = this.connectionService.getRedis();
-    const keys = await redis.keys("bull:*:*");
+    const redis = this.connectionService.getRedis(connectionId);
 
     const queueNames = new Set<string>();
-    for (const key of keys) {
-      const match = key.match(/^bull:([^:]+):/);
-      if (match) queueNames.add(match[1]);
+    const stream = redis.scanStream({ match: "bull:*:*", count: 200 });
+    for await (const keys of stream) {
+      for (const key of keys as string[]) {
+        const match = key.match(/^bull:([^:]+):/);
+        if (match) queueNames.add(match[1]);
+      }
     }
 
     const summaries = [];
     for (const queueName of queueNames) {
-      const queue = this.connectionService.getQueue(queueName);
+      const queue = this.connectionService.getQueue(queueName, connectionId);
       const counts = await queue.getJobCounts();
       const totalFailed = counts.failed || 0;
       const totalJobs = Object.values(counts).reduce((a, b) => a + b, 0);
@@ -160,10 +146,6 @@ export class FailureAnalyzer {
     return summaries.sort((a, b) => b.failureRate - a.failureRate);
   }
 
-  /**
-   * Normalize an error message by stripping variable parts
-   * (IDs, timestamps, numbers, paths) to group similar errors.
-   */
   private normalizeError(error: string): string {
     return error
       .replace(/\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi, "<UUID>")
@@ -177,10 +159,6 @@ export class FailureAnalyzer {
       .slice(0, 200);
   }
 
-  /**
-   * Suggest a probable root cause based on error message patterns.
-   * Maps common error signatures to actionable suggestions.
-   */
   private suggestCause(error: string): string {
     const lower = error.toLowerCase();
 
