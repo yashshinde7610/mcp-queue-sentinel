@@ -2,30 +2,24 @@ import { ConnectionService } from "../services/connection.service.js";
 import { QueueService } from "../services/queue.service.js";
 import { JobService } from "../services/job.service.js";
 import { FailureAnalyzer } from "../analytics/failure-analyzer.js";
-import { TokenBucketRateLimiter } from "../middleware/rate-limiter.js";
 import { MetricsCollector } from "../monitoring/metrics-collector.js";
-import { TOOL_CATEGORIES } from "../types/index.js";
-import type { ToolCategory } from "../types/index.js";
 
-/** Central tool dispatcher with rate limiting and metrics. */
+/** Central tool dispatcher with metrics. */
 export class ToolHandler {
   private connectionService: ConnectionService;
   private queueService: QueueService;
   private jobService: JobService;
   private failureAnalyzer: FailureAnalyzer;
-  private rateLimiter: TokenBucketRateLimiter;
   private metrics: MetricsCollector;
 
   constructor(
     connectionService: ConnectionService,
-    rateLimiter: TokenBucketRateLimiter,
     metrics: MetricsCollector
   ) {
     this.connectionService = connectionService;
     this.queueService = new QueueService(connectionService);
     this.jobService = new JobService(connectionService);
     this.failureAnalyzer = new FailureAnalyzer(connectionService);
-    this.rateLimiter = rateLimiter;
     this.metrics = metrics;
   }
 
@@ -34,21 +28,11 @@ export class ToolHandler {
     args: Record<string, any>
   ): Promise<{ content: Array<{ type: string; text: string }>; isError?: boolean }> {
     try {
-      const category = TOOL_CATEGORIES[name] || ("read" as ToolCategory);
       const connectionId = args?.connectionId;
-      const limitResult = await this.rateLimiter.consume(category, connectionId);
-
-      if (!limitResult.allowed) {
-        this.metrics.recordRateLimitHit();
-        return {
-          content: [
-            {
-              type: "text",
-              text: `Rate limit exceeded for ${category} operations. Retry after ${limitResult.retryAfterMs}ms. Remaining: ${limitResult.remaining}/${limitResult.limit}`,
-            },
-          ],
-          isError: true,
-        };
+      
+      // Enforce connectionId for all tools except those that don't need it
+      if (name !== "connect" && name !== "list_connections" && !connectionId) {
+        throw new Error("Missing required argument: connectionId");
       }
 
       this.metrics.recordToolCall(name);

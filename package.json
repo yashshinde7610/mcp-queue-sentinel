@@ -1,7 +1,7 @@
 {
   "name": "mcp-queue-sentinel",
   "version": "1.0.0",
-  "description": "A microservices-based MCP server for BullMQ queue management with rate limiting, real-time monitoring, and failure analysis",
+  "description": "An MCP server for BullMQ queue management with real-time monitoring and failure analysis",
   "main": "dist/index.js",
   "type": "module",
   "bin": {
@@ -36,7 +36,8 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.17.0",
     "bullmq": "^5.56.9",
-    "ioredis": "^5.6.1"
+    "ioredis": "^5.6.1",
+    "lru-cache": "^11.5.1"
   },
   "devDependencies": {
     "@types/jest": "^29.5.14",

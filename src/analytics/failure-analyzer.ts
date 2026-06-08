@@ -9,7 +9,7 @@ export class FailureAnalyzer {
     queueName: string,
     windowMs: number = 24 * 60 * 60 * 1000,
     limit: number = 500,
-    connectionId?: string
+    connectionId: string
   ): Promise<FailureAnalysisResult> {
     const queue = this.connectionService.getQueue(queueName, connectionId);
 
@@ -96,7 +96,7 @@ export class FailureAnalyzer {
     };
   }
 
-  async getFailureSummary(connectionId?: string): Promise<
+  async getFailureSummary(connectionId: string): Promise<
     Array<{
       queueName: string;
       totalFailed: number;

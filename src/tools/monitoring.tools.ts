@@ -7,8 +7,9 @@ export const monitoringTools: Tool[] = [
     inputSchema: {
       type: "object",
       properties: {
-        connectionId: { type: "string", description: "Target connection ID (uses last connected if omitted)" },
+        connectionId: { type: "string", description: "Target connection ID" },
       },
+      required: ["connectionId"],
     },
   },
   {
@@ -17,8 +18,9 @@ export const monitoringTools: Tool[] = [
     inputSchema: {
       type: "object",
       properties: {
-        connectionId: { type: "string", description: "Target connection ID (uses last connected if omitted)" },
+        connectionId: { type: "string", description: "Target connection ID" },
       },
+      required: ["connectionId"],
     },
   },
 ];
@@ -42,9 +44,9 @@ export const failureAnalysisTools: Tool[] = [
           description: "Max failed jobs to analyze",
           default: 500,
         },
-        connectionId: { type: "string", description: "Target connection ID (uses last connected if omitted)" },
+        connectionId: { type: "string", description: "Target connection ID" },
       },
-      required: ["queue"],
+      required: ["queue", "connectionId"],
     },
   },
   {
@@ -53,8 +55,9 @@ export const failureAnalysisTools: Tool[] = [
     inputSchema: {
       type: "object",
       properties: {
-        connectionId: { type: "string", description: "Target connection ID (uses last connected if omitted)" },
+        connectionId: { type: "string", description: "Target connection ID" },
       },
+      required: ["connectionId"],
     },
   },
 ];

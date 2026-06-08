@@ -27,7 +27,7 @@ export const connectionTools: Tool[] = [
     inputSchema: {
       type: "object",
       properties: {
-        connectionId: { type: "string", description: "Target connection ID (uses last connected if omitted)" },
+        connectionId: { type: "string", description: "Target connection ID" },
       },
     },
   },

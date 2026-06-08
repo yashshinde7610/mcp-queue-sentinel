@@ -8,7 +8,6 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 
 import { ConnectionService } from "./services/connection.service.js";
-import { TokenBucketRateLimiter } from "./middleware/rate-limiter.js";
 import { MetricsCollector } from "./monitoring/metrics-collector.js";
 import { SSEServer } from "./monitoring/sse-server.js";
 import { connectionTools } from "./tools/connection.tools.js";
@@ -19,10 +18,9 @@ import { ToolHandler } from "./handlers/tool-handler.js";
 import { logger } from "./utils/logger.js";
 
 async function main() {
-  const connectionService = new ConnectionService();
-  const rateLimiter = new TokenBucketRateLimiter();
   const metricsCollector = new MetricsCollector();
-  const toolHandler = new ToolHandler(connectionService, rateLimiter, metricsCollector);
+  const connectionService = new ConnectionService(metricsCollector);
+  const toolHandler = new ToolHandler(connectionService, metricsCollector);
 
   // SSE monitoring server — non-critical, log failures instead of crashing
   const sseServer = new SSEServer(metricsCollector);
@@ -61,7 +59,6 @@ async function main() {
 
   const shutdown = async () => {
     await connectionService.shutdownAll();
-    await rateLimiter.shutdown();
     await sseServer.stop();
     process.exit(0);
   };

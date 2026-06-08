@@ -1,11 +1,10 @@
+import { LRUCache } from "lru-cache";
 import type { MetricsSnapshot, QueueMetrics } from "../types/index.js";
 
 /** In-memory metrics collector for tool invocations, queue activity, and rate-limit events. */
 export class MetricsCollector {
-  private static readonly MAX_TRACKED_QUEUES = 500;
-
   private toolCalls = new Map<string, number>();
-  private queueMetrics = new Map<
+  private queueMetrics = new LRUCache<
     string,
     {
       jobsAdded: number;
@@ -13,8 +12,7 @@ export class MetricsCollector {
       jobsCompleted: number;
       processingTimes: number[];
     }
-  >();
-  private rateLimitHits = 0;
+  >({ max: 500 });
   private startTime = Date.now();
 
   recordToolCall(toolName: string): void {
@@ -44,10 +42,6 @@ export class MetricsCollector {
     }
   }
 
-  recordRateLimitHit(): void {
-    this.rateLimitHits++;
-  }
-
   getSnapshot(): MetricsSnapshot {
     const toolCallBreakdown: Record<string, number> = {};
     let totalToolCalls = 0;
@@ -58,7 +52,8 @@ export class MetricsCollector {
     }
 
     const queues: QueueMetrics[] = [];
-    for (const [queueName, metrics] of this.queueMetrics) {
+    // LRUCache iteration using entries()
+    for (const [queueName, metrics] of this.queueMetrics.entries()) {
       const avgTime =
         metrics.processingTimes.length > 0
           ? metrics.processingTimes.reduce((a, b) => a + b, 0) /
@@ -80,7 +75,6 @@ export class MetricsCollector {
       totalToolCalls,
       toolCallBreakdown,
       queues,
-      rateLimitHits: this.rateLimitHits,
       uptime: Date.now() - this.startTime,
       timestamp: Date.now(),
     };
@@ -89,18 +83,11 @@ export class MetricsCollector {
   reset(): void {
     this.toolCalls.clear();
     this.queueMetrics.clear();
-    this.rateLimitHits = 0;
     this.startTime = Date.now();
   }
 
   private ensureQueueMetrics(queueName: string): void {
     if (this.queueMetrics.has(queueName)) return;
-
-    // Evict oldest entry if at capacity (prevents OOM from dynamic queue names)
-    if (this.queueMetrics.size >= MetricsCollector.MAX_TRACKED_QUEUES) {
-      const oldest = this.queueMetrics.keys().next().value;
-      if (oldest) this.queueMetrics.delete(oldest);
-    }
 
     this.queueMetrics.set(queueName, {
       jobsAdded: 0,

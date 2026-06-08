@@ -12,7 +12,7 @@ export const queueTools: Tool[] = [
           description: "Queue name pattern (supports wildcards)",
           default: "*",
         },
-        connectionId: { type: "string", description: "Target connection ID (uses last connected if omitted)" },
+        connectionId: { type: "string", description: "Target connection ID" },
       },
     },
   },
@@ -23,9 +23,9 @@ export const queueTools: Tool[] = [
       type: "object",
       properties: {
         queue: { type: "string", description: "Queue name" },
-        connectionId: { type: "string", description: "Target connection ID (uses last connected if omitted)" },
+        connectionId: { type: "string", description: "Target connection ID" },
       },
-      required: ["queue"],
+      required: ["queue", "connectionId"],
     },
   },
   {
@@ -35,9 +35,9 @@ export const queueTools: Tool[] = [
       type: "object",
       properties: {
         queue: { type: "string", description: "Queue name" },
-        connectionId: { type: "string", description: "Target connection ID (uses last connected if omitted)" },
+        connectionId: { type: "string", description: "Target connection ID" },
       },
-      required: ["queue"],
+      required: ["queue", "connectionId"],
     },
   },
   {
@@ -47,9 +47,9 @@ export const queueTools: Tool[] = [
       type: "object",
       properties: {
         queue: { type: "string", description: "Queue name" },
-        connectionId: { type: "string", description: "Target connection ID (uses last connected if omitted)" },
+        connectionId: { type: "string", description: "Target connection ID" },
       },
-      required: ["queue"],
+      required: ["queue", "connectionId"],
     },
   },
   {
@@ -59,9 +59,9 @@ export const queueTools: Tool[] = [
       type: "object",
       properties: {
         queue: { type: "string", description: "Queue name" },
-        connectionId: { type: "string", description: "Target connection ID (uses last connected if omitted)" },
+        connectionId: { type: "string", description: "Target connection ID" },
       },
-      required: ["queue"],
+      required: ["queue", "connectionId"],
     },
   },
   {
@@ -79,9 +79,9 @@ export const queueTools: Tool[] = [
           description: "Job status to clean",
           default: "completed",
         },
-        connectionId: { type: "string", description: "Target connection ID (uses last connected if omitted)" },
+        connectionId: { type: "string", description: "Target connection ID" },
       },
-      required: ["queue"],
+      required: ["queue", "connectionId"],
     },
   },
 ];

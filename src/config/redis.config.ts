@@ -64,7 +64,7 @@ function createTlsConnection(
     port: parseInt(url.port) || 6379,
     db: url.pathname ? parseInt(url.pathname.slice(1)) || 0 : 0,
     tls: {
-      rejectUnauthorized: false,
+      rejectUnauthorized: process.env.REDIS_TLS_VERIFY !== "false",
       ...(options.tls as Record<string, unknown>),
     },
   };

@@ -55,28 +55,16 @@ describe("MetricsCollector", () => {
     });
   });
 
-  describe("rate limit tracking", () => {
-    it("should count rate limit hits", () => {
-      collector.recordRateLimitHit();
-      collector.recordRateLimitHit();
-
-      const snapshot = collector.getSnapshot();
-      expect(snapshot.rateLimitHits).toBe(2);
-    });
-  });
-
   describe("reset", () => {
     it("should clear all metrics", () => {
       collector.recordToolCall("stats");
       collector.recordJobAdded("test-queue");
-      collector.recordRateLimitHit();
 
       collector.reset();
 
       const snapshot = collector.getSnapshot();
       expect(snapshot.totalToolCalls).toBe(0);
       expect(snapshot.queues).toHaveLength(0);
-      expect(snapshot.rateLimitHits).toBe(0);
     });
   });
 
@@ -95,7 +83,6 @@ describe("MetricsCollector", () => {
       expect(snapshot).toHaveProperty("totalToolCalls");
       expect(snapshot).toHaveProperty("toolCallBreakdown");
       expect(snapshot).toHaveProperty("queues");
-      expect(snapshot).toHaveProperty("rateLimitHits");
       expect(snapshot).toHaveProperty("uptime");
       expect(snapshot).toHaveProperty("timestamp");
       expect(typeof snapshot.timestamp).toBe("number");

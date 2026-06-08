@@ -1,6 +1,7 @@
 import { Redis } from "ioredis";
-import { Queue, Worker, QueueEvents } from "bullmq";
+import { Queue, QueueEvents } from "bullmq";
 import type { Connection, RedisConnectionConfig } from "../types/index.js";
+import { MetricsCollector } from "../monitoring/metrics-collector.js";
 import {
   createRedisConnection,
   DEFAULT_REDIS_CONFIG,
@@ -9,7 +10,8 @@ import {
 /** Manages multiple Redis connections and provides connection lifecycle operations. */
 export class ConnectionService {
   private connections = new Map<string, Connection>();
-  private lastConnectedId: string | null = null;
+
+  constructor(private metricsCollector: MetricsCollector) {}
 
   /** Connect to a Redis instance and register it under the given ID. */
   async connect(config: RedisConnectionConfig): Promise<string> {
@@ -47,11 +49,8 @@ export class ConnectionService {
     this.connections.set(id, {
       redis,
       queues: new Map(),
-      workers: new Map(),
       queueEvents: new Map(),
     });
-
-    this.lastConnectedId = id;
 
     const target = redisUrl || `${finalHost}:${port || 6379}`;
     let info = `Connected to Redis at ${target} (connection: ${id})`;
@@ -68,52 +67,46 @@ export class ConnectionService {
     return info;
   }
 
-  /** Disconnect a specific connection (or the last-connected one). */
-  async disconnect(connectionId?: string): Promise<string> {
-    const targetId = connectionId || this.lastConnectedId;
-    if (!targetId) {
-      throw new Error("No active connection");
+  /** Disconnect a specific connection. */
+  async disconnect(connectionId: string): Promise<string> {
+    if (!connectionId) {
+      throw new Error("Missing required connectionId");
     }
 
-    const connection = this.connections.get(targetId);
+    const connection = this.connections.get(connectionId);
     if (connection) {
       for (const queue of connection.queues.values()) await queue.close();
-      for (const worker of connection.workers.values()) await worker.close();
       for (const qe of connection.queueEvents.values()) await qe.close();
       connection.redis.disconnect();
-      this.connections.delete(targetId);
+      this.connections.delete(connectionId);
     }
 
-    if (this.lastConnectedId === targetId) {
-      this.lastConnectedId = null;
-    }
-    return `Disconnected from connection: ${targetId}`;
+    return `Disconnected from connection: ${connectionId}`;
   }
 
-  /** List all registered connections, indicating which one was last connected. */
+  /** List all registered connections. */
   listConnections(): Array<{ id: string; active: boolean }> {
     return Array.from(this.connections.keys()).map((id) => ({
       id,
-      active: id === this.lastConnectedId,
+      active: false,
     }));
   }
 
   /** Returns the resolved connection, or throws. */
-  getCurrentConnection(connectionId?: string): Connection {
-    const targetId = connectionId || this.lastConnectedId;
-    if (!targetId || !this.connections.has(targetId)) {
-      throw new Error("No active connection. Use 'connect' first.");
+  getCurrentConnection(connectionId: string): Connection {
+    if (!connectionId || !this.connections.has(connectionId)) {
+      throw new Error(`Connection '${connectionId}' not found. Use 'connect' first.`);
     }
-    return this.connections.get(targetId)!;
+    return this.connections.get(connectionId)!;
   }
 
-  /** Get the Redis client for the specified (or last-connected) connection. */
-  getRedis(connectionId?: string): Redis {
+  /** Get the Redis client for the specified connection. */
+  getRedis(connectionId: string): Redis {
     return this.getCurrentConnection(connectionId).redis;
   }
 
   /** Get or create a BullMQ Queue instance for the given queue name. */
-  getQueue(queueName: string, connectionId?: string): Queue {
+  getQueue(queueName: string, connectionId: string): Queue {
     const connection = this.getCurrentConnection(connectionId);
 
     if (!connection.queues.has(queueName)) {
@@ -121,6 +114,19 @@ export class ConnectionService {
         connection: connection.redis.duplicate() as any,
       });
       connection.queues.set(queueName, queue);
+
+      // Wire up QueueEvents to the metrics collector to drive the dashboard
+      const qe = new QueueEvents(queueName, {
+        connection: connection.redis.duplicate() as any,
+      });
+      qe.on("completed", ({ returnvalue }) => {
+        // Calculate a dummy processing time if job duration isn't directly available in the event payload
+        this.metricsCollector.recordJobCompleted(queueName, 100);
+      });
+      qe.on("failed", () => {
+        this.metricsCollector.recordJobFailed(queueName);
+      });
+      connection.queueEvents.set(queueName, qe);
     }
 
     return connection.queues.get(queueName)!;
@@ -130,11 +136,9 @@ export class ConnectionService {
   async shutdownAll(): Promise<void> {
     for (const [, connection] of this.connections) {
       for (const queue of connection.queues.values()) await queue.close();
-      for (const worker of connection.workers.values()) await worker.close();
       for (const qe of connection.queueEvents.values()) await qe.close();
       connection.redis.disconnect();
     }
     this.connections.clear();
-    this.lastConnectedId = null;
   }
 }

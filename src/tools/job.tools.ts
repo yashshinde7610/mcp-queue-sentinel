@@ -15,9 +15,9 @@ export const jobTools: Tool[] = [
         },
         start: { type: "number", description: "Start index", default: 0 },
         end: { type: "number", description: "End index", default: 10 },
-        connectionId: { type: "string", description: "Target connection ID (uses last connected if omitted)" },
+        connectionId: { type: "string", description: "Target connection ID" },
       },
-      required: ["queue", "status"],
+      required: ["queue", "status", "connectionId"],
     },
   },
   {
@@ -28,9 +28,9 @@ export const jobTools: Tool[] = [
       properties: {
         queue: { type: "string", description: "Queue name" },
         jobId: { type: "string", description: "Job ID" },
-        connectionId: { type: "string", description: "Target connection ID (uses last connected if omitted)" },
+        connectionId: { type: "string", description: "Target connection ID" },
       },
-      required: ["queue", "jobId"],
+      required: ["queue", "jobId", "connectionId"],
     },
   },
   {
@@ -54,9 +54,9 @@ export const jobTools: Tool[] = [
             removeOnFail: { type: "boolean", description: "Remove on fail" },
           },
         },
-        connectionId: { type: "string", description: "Target connection ID (uses last connected if omitted)" },
+        connectionId: { type: "string", description: "Target connection ID" },
       },
-      required: ["queue", "name", "data"],
+      required: ["queue", "name", "data", "connectionId"],
     },
   },
   {
@@ -67,9 +67,9 @@ export const jobTools: Tool[] = [
       properties: {
         queue: { type: "string", description: "Queue name" },
         jobId: { type: "string", description: "Job ID" },
-        connectionId: { type: "string", description: "Target connection ID (uses last connected if omitted)" },
+        connectionId: { type: "string", description: "Target connection ID" },
       },
-      required: ["queue", "jobId"],
+      required: ["queue", "jobId", "connectionId"],
     },
   },
   {
@@ -80,9 +80,9 @@ export const jobTools: Tool[] = [
       properties: {
         queue: { type: "string", description: "Queue name" },
         jobId: { type: "string", description: "Job ID" },
-        connectionId: { type: "string", description: "Target connection ID (uses last connected if omitted)" },
+        connectionId: { type: "string", description: "Target connection ID" },
       },
-      required: ["queue", "jobId"],
+      required: ["queue", "jobId", "connectionId"],
     },
   },
   {
@@ -93,9 +93,9 @@ export const jobTools: Tool[] = [
       properties: {
         queue: { type: "string", description: "Queue name" },
         jobId: { type: "string", description: "Job ID" },
-        connectionId: { type: "string", description: "Target connection ID (uses last connected if omitted)" },
+        connectionId: { type: "string", description: "Target connection ID" },
       },
-      required: ["queue", "jobId"],
+      required: ["queue", "jobId", "connectionId"],
     },
   },
   {
@@ -106,9 +106,9 @@ export const jobTools: Tool[] = [
       properties: {
         queue: { type: "string", description: "Queue name" },
         jobId: { type: "string", description: "Job ID" },
-        connectionId: { type: "string", description: "Target connection ID (uses last connected if omitted)" },
+        connectionId: { type: "string", description: "Target connection ID" },
       },
-      required: ["queue", "jobId"],
+      required: ["queue", "jobId", "connectionId"],
     },
   },
   {
@@ -120,9 +120,9 @@ export const jobTools: Tool[] = [
         queue: { type: "string", description: "Queue name" },
         jobId: { type: "string", description: "Job ID" },
         message: { type: "string", description: "Log message" },
-        connectionId: { type: "string", description: "Target connection ID (uses last connected if omitted)" },
+        connectionId: { type: "string", description: "Target connection ID" },
       },
-      required: ["queue", "jobId", "message"],
+      required: ["queue", "jobId", "message", "connectionId"],
     },
   },
   {
@@ -137,9 +137,9 @@ export const jobTools: Tool[] = [
         dlqKey: { type: "string", description: "DLQ Redis key", default: "dlq:failed_jobs" },
         ttlDays: { type: "number", description: "TTL in days for DLQ entries", default: 30 },
         dryRun: { type: "boolean", description: "Preview without moving", default: false },
-        connectionId: { type: "string", description: "Target connection ID (uses last connected if omitted)" },
+        connectionId: { type: "string", description: "Target connection ID" },
       },
-      required: ["queue", "jobName", "beforeTimestamp"],
+      required: ["queue", "jobName", "beforeTimestamp", "connectionId"],
     },
   },
   {
@@ -151,7 +151,7 @@ export const jobTools: Tool[] = [
         dlqKey: { type: "string", description: "DLQ Redis key", default: "dlq:failed_jobs" },
         jobName: { type: "string", description: "Filter by job name" },
         limit: { type: "number", description: "Max results", default: 10 },
-        connectionId: { type: "string", description: "Target connection ID (uses last connected if omitted)" },
+        connectionId: { type: "string", description: "Target connection ID" },
       },
     },
   },

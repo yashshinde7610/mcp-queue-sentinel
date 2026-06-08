@@ -9,7 +9,7 @@ export class JobService {
     status: string,
     start: number = 0,
     end: number = 10,
-    connectionId?: string
+    connectionId: string
   ): Promise<any[]> {
     const queue = this.connectionService.getQueue(queueName, connectionId);
 
@@ -52,7 +52,7 @@ export class JobService {
     }));
   }
 
-  async getJob(queueName: string, jobId: string, connectionId?: string): Promise<any> {
+  async getJob(queueName: string, jobId: string, connectionId: string): Promise<any> {
     const queue = this.connectionService.getQueue(queueName, connectionId);
     const job = await queue.getJob(jobId);
 
@@ -81,35 +81,35 @@ export class JobService {
     jobName: string,
     data: Record<string, unknown>,
     opts: Record<string, unknown> = {},
-    connectionId?: string
+    connectionId: string
   ): Promise<{ id: string | undefined; name: string }> {
     const queue = this.connectionService.getQueue(queueName, connectionId);
     const job = await queue.add(jobName, data, opts);
     return { id: job.id, name: job.name };
   }
 
-  async removeJob(queueName: string, jobId: string, connectionId?: string): Promise<void> {
+  async removeJob(queueName: string, jobId: string, connectionId: string): Promise<void> {
     const queue = this.connectionService.getQueue(queueName, connectionId);
     const job = await queue.getJob(jobId);
     if (!job) throw new Error(`Job ${jobId} not found in queue ${queueName}`);
     await job.remove();
   }
 
-  async retryJob(queueName: string, jobId: string, connectionId?: string): Promise<void> {
+  async retryJob(queueName: string, jobId: string, connectionId: string): Promise<void> {
     const queue = this.connectionService.getQueue(queueName, connectionId);
     const job = await queue.getJob(jobId);
     if (!job) throw new Error(`Job ${jobId} not found in queue ${queueName}`);
     await job.retry();
   }
 
-  async promoteJob(queueName: string, jobId: string, connectionId?: string): Promise<void> {
+  async promoteJob(queueName: string, jobId: string, connectionId: string): Promise<void> {
     const queue = this.connectionService.getQueue(queueName, connectionId);
     const job = await queue.getJob(jobId);
     if (!job) throw new Error(`Job ${jobId} not found in queue ${queueName}`);
     await job.promote();
   }
 
-  async getJobLogs(queueName: string, jobId: string, connectionId?: string): Promise<string[]> {
+  async getJobLogs(queueName: string, jobId: string, connectionId: string): Promise<string[]> {
     const queue = this.connectionService.getQueue(queueName, connectionId);
     const job = await queue.getJob(jobId);
     if (!job) throw new Error(`Job ${jobId} not found in queue ${queueName}`);
@@ -121,7 +121,7 @@ export class JobService {
     queueName: string,
     jobId: string,
     message: string,
-    connectionId?: string
+    connectionId: string
   ): Promise<void> {
     const queue = this.connectionService.getQueue(queueName, connectionId);
     const job = await queue.getJob(jobId);
@@ -136,7 +136,7 @@ export class JobService {
     dlqKey: string = "dlq:failed_jobs",
     ttlDays: number = 30,
     dryRun: boolean = false,
-    connectionId?: string
+    connectionId: string
   ): Promise<{ totalMoved: number; movedJobs: any[] }> {
     const queue = this.connectionService.getQueue(queueName, connectionId);
     const redis = this.connectionService.getRedis(connectionId);
@@ -208,9 +208,9 @@ export class JobService {
 
   async queryDLQ(
     dlqKey = "dlq:failed_jobs",
-    jobName?: string,
+    jobName: string | undefined,
     limit = 10,
-    connectionId?: string
+    connectionId: string
   ): Promise<any[]> {
     const redis = this.connectionService.getRedis(connectionId);
     const jobs: any[] = [];
