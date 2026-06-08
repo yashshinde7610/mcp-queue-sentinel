@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Queue Sentinel — Live Dashboard</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg-primary: #0f1117;
+      --bg-card: #1a1d27;
+      --bg-card-hover: #222633;
+      --border: #2a2e3a;
+      --text-primary: #e4e7ec;
+      --text-secondary: #8b8fa3;
+      --accent-blue: #3b82f6;
+      --accent-green: #22c55e;
+      --accent-amber: #f59e0b;
+      --accent-red: #ef4444;
+      --accent-purple: #8b5cf6;
+      --glow-blue: rgba(59, 130, 246, 0.15);
+      --glow-green: rgba(34, 197, 94, 0.15);
+    }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      padding: 24px;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 32px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .header h1 {
+      font-size: 24px;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 100px;
+      font-size: 12px;
+      font-weight: 500;
+      background: var(--glow-green);
+      color: var(--accent-green);
+      border: 1px solid rgba(34, 197, 94, 0.3);
+    }
+
+    .status-badge .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent-green);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    .status-badge.disconnected {
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--accent-red);
+      border-color: rgba(239, 68, 68, 0.3);
+    }
+
+    .status-badge.disconnected .dot {
+      background: var(--accent-red);
+      animation: none;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .metric-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      transition: all 0.2s ease;
+    }
+
+    .metric-card:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--accent-blue);
+      box-shadow: 0 0 20px var(--glow-blue);
+    }
+
+    .metric-card .label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+
+    .metric-card .value {
+      font-size: 32px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      transition: color 0.3s ease;
+    }
+
+    .metric-card .sub {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+
+    .section-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .tool-breakdown {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 32px;
+    }
+
+    .tool-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .tool-row:last-child { border-bottom: none; }
+
+    .tool-name {
+      font-size: 13px;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      color: var(--accent-blue);
+    }
+
+    .tool-count {
+      font-size: 13px;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .bar-container {
+      flex: 1;
+      margin: 0 16px;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple));
+      border-radius: 2px;
+      transition: width 0.5s ease;
+    }
+
+    .queue-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .queue-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+    }
+
+    .queue-card h3 {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: var(--accent-purple);
+    }
+
+    .queue-stat {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 0;
+      font-size: 13px;
+    }
+
+    .queue-stat .qs-label { color: var(--text-secondary); }
+    .queue-stat .qs-value { font-weight: 600; font-variant-numeric: tabular-nums; }
+
+    .empty-state {
+      text-align: center;
+      padding: 48px;
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+
+    .footer {
+      text-align: center;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      color: var(--text-secondary);
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>⚡ Queue Sentinel</h1>
+    <span class="status-badge" id="status">
+      <span class="dot"></span>
+      <span id="status-text">Connecting...</span>
+    </span>
+  </div>
+
+  <div class="metrics-grid" id="metrics-grid">
+    <div class="metric-card">
+      <div class="label">Total Tool Calls</div>
+      <div class="value" id="total-calls">0</div>
+      <div class="sub">since server start</div>
+    </div>
+    <div class="metric-card">
+      <div class="label">Rate Limit Hits</div>
+      <div class="value" id="rate-limit-hits" style="color: var(--accent-amber)">0</div>
+      <div class="sub">rejected requests</div>
+    </div>
+    <div class="metric-card">
+      <div class="label">Active Queues</div>
+      <div class="value" id="active-queues" style="color: var(--accent-green)">0</div>
+      <div class="sub">tracked queues</div>
+    </div>
+    <div class="metric-card">
+      <div class="label">Uptime</div>
+      <div class="value" id="uptime" style="color: var(--accent-purple)">0s</div>
+      <div class="sub">server uptime</div>
+    </div>
+  </div>
+
+  <div class="section-title">📊 Tool Call Breakdown</div>
+  <div class="tool-breakdown" id="tool-breakdown">
+    <div class="empty-state">Waiting for data...</div>
+  </div>
+
+  <div class="section-title">📦 Queue Metrics</div>
+  <div class="queue-cards" id="queue-cards">
+    <div class="empty-state">No queue data yet</div>
+  </div>
+
+  <div class="footer">
+    Queue Sentinel Monitoring Dashboard — Auto-refreshes via SSE
+  </div>
+
+  <script>
+    const evtSource = new EventSource('/events');
+
+    const statusBadge = document.getElementById('status');
+    const statusText = document.getElementById('status-text');
+
+    evtSource.onopen = () => {
+      statusBadge.className = 'status-badge';
+      statusText.textContent = 'Live';
+    };
+
+    evtSource.onerror = () => {
+      statusBadge.className = 'status-badge disconnected';
+      statusText.textContent = 'Disconnected';
+    };
+
+    evtSource.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      updateDashboard(data);
+    };
+
+    function formatUptime(ms) {
+      const seconds = Math.floor(ms / 1000);
+      if (seconds < 60) return seconds + 's';
+      const minutes = Math.floor(seconds / 60);
+      if (minutes < 60) return minutes + 'm ' + (seconds % 60) + 's';
+      const hours = Math.floor(minutes / 60);
+      return hours + 'h ' + (minutes % 60) + 'm';
+    }
+
+    function updateDashboard(data) {
+      // Update top-level metrics
+      document.getElementById('total-calls').textContent = data.totalToolCalls.toLocaleString();
+      document.getElementById('rate-limit-hits').textContent = data.rateLimitHits.toLocaleString();
+      document.getElementById('active-queues').textContent = data.queues.length;
+      document.getElementById('uptime').textContent = formatUptime(data.uptime);
+
+      // Update tool breakdown
+      const breakdown = document.getElementById('tool-breakdown');
+      const entries = Object.entries(data.toolCallBreakdown || {});
+
+      if (entries.length === 0) {
+        breakdown.innerHTML = '<div class="empty-state">No tool calls yet</div>';
+      } else {
+        const maxCount = Math.max(...entries.map(([, c]) => c));
+        breakdown.innerHTML = entries
+          .sort((a, b) => b[1] - a[1])
+          .map(([tool, count]) => {
+            const pct = maxCount > 0 ? (count / maxCount) * 100 : 0;
+            return `
+              <div class="tool-row">
+                <span class="tool-name">${tool}</span>
+                <div class="bar-container">
+                  <div class="bar-fill" style="width: ${pct}%"></div>
+                </div>
+                <span class="tool-count">${count}</span>
+              </div>`;
+          })
+          .join('');
+      }
+
+      // Update queue cards
+      const queueContainer = document.getElementById('queue-cards');
+      if (data.queues.length === 0) {
+        queueContainer.innerHTML = '<div class="empty-state">No queue data yet</div>';
+      } else {
+        queueContainer.innerHTML = data.queues
+          .map(q => `
+            <div class="queue-card">
+              <h3>${q.queueName}</h3>
+              <div class="queue-stat">
+                <span class="qs-label">Jobs Added</span>
+                <span class="qs-value">${q.jobsAdded}</span>
+              </div>
+              <div class="queue-stat">
+                <span class="qs-label">Jobs Completed</span>
+                <span class="qs-value" style="color: var(--accent-green)">${q.jobsCompleted}</span>
+              </div>
+              <div class="queue-stat">
+                <span class="qs-label">Jobs Failed</span>
+                <span class="qs-value" style="color: var(--accent-red)">${q.jobsFailed}</span>
+              </div>
+              <div class="queue-stat">
+                <span class="qs-label">Avg Processing</span>
+                <span class="qs-value">${q.avgProcessingTimeMs}ms</span>
+              </div>
+            </div>`)
+          .join('');
+      }
+    }
+  </script>
+</body>
+</html>
